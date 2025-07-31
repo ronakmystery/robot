@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Control</title>
+</head>
+
+<body>
+
+
+    <div id="servos"></div>
+
+    <script>
+        const activeChannels = [15, 14, 13, 12, 7, 6, 5, 4]; // Updated to match the new servo channels
+        const labels = {
+            15: "b r 1",
+            14: "b l 1",
+            13: "f l 1",
+            12: "f r 1",
+            7: "f r 2",
+            6: "f l 2",
+            5: "b r 2",
+            4: "b l 2"
+        };
+
+        const servoContainer = document.getElementById("servos");
+
+        for (const ch of activeChannels) {
+            const group = document.createElement("div");
+            group.className = "servo-group";
+
+            group.innerHTML = `
+            <div id="label-${ch}">${labels[ch]}</div>
+            <input type="range" min="0" max="180" step="20" id="servo-${ch}" />
+            <div class="angle-label">Angle: <span id="value-${ch}">0</span>°</div>
+        `;
+
+            servoContainer.appendChild(group);
+        }
+
+        async function fetchState() {
+            const res = await fetch('/api/state');
+            const angles = await res.json();
+
+            for (const ch of activeChannels) {
+                const slider = document.getElementById(`servo-${ch}`);
+                const valueLabel = document.getElementById(`value-${ch}`);
+                slider.value = angles[ch];
+                valueLabel.textContent = angles[ch];
+
+                slider.addEventListener("input", async (e) => {
+                    const angle = e.target.value;
+                    valueLabel.textContent = angle;
+                    await fetch(`/api/angle/${ch}/${angle}`, { method: 'POST' });
+                });
+            }
+        }
+
+        setInterval(() => {
+            fetchState();
+
+        }, interval = 1000);
+
+
+        function setpose(pose) {
+            for (const ch of activeChannels) {
+                const slider = document.getElementById(`servo-${ch}`);
+                const valueLabel = document.getElementById(`value-${ch}`);
+                if (pose[ch] !== undefined) {
+                    slider.value = pose[ch];
+                    valueLabel.textContent = pose[ch];
+                }
+            }
+        }
+    </script>
+
+
+
+</body>
+
+</html>
