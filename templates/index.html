@@ -9,20 +9,54 @@
 
 <body>
 
+    <button onclick="triggerWalk()">Walk</button>
+
+    <script>
+        function triggerWalk() {
+            fetch('/api/walk', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Walk triggered:', data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+
+    <button onclick="triggerRun()">Run</button>
+
+    <script>
+        function triggerRun() {
+            fetch('/api/run', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Run triggered:', data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+
 
     <div id="servos"></div>
 
     <script>
         const activeChannels = [15, 14, 13, 12, 7, 6, 5, 4]; // Updated to match the new servo channels
         const labels = {
-            15: "b r 1",
-            14: "b l 1",
-            13: "f l 1",
-            12: "f r 1",
-            7: "f r 2",
-            6: "f l 2",
-            5: "b r 2",
-            4: "b l 2"
+            15: "b l 1",
+            14: "b r 1",
+            13: "f r 1",
+            12: "f l 1",
+            7: "f l 2",
+            6: "f r 2",
+            5: "b l 2",
+            4: "b r 2"
         };
 
         const servoContainer = document.getElementById("servos");
@@ -75,6 +109,9 @@
             }
         }
     </script>
+
+
+
 
 
 

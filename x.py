@@ -8,7 +8,7 @@ from flask import Flask, render_template, jsonify, request, send_file
 
 import smbus
 import math
-
+import random
 
 class PCA9685:
     __MODE1 = 0x00
@@ -49,6 +49,7 @@ class PCA9685:
 
 
 pwm = PCA9685()
+time.sleep(1)  # Allow time for the PCA9685 to initialize
 pwm.setPWMFreq(50)
 
 
@@ -71,7 +72,7 @@ def load_poses():
                 print("✅ Poses loaded:", poses.keys())
             except json.JSONDecodeError:
                 print("⚠️ Failed to load poses.json. Using built-in default.")
-
+load_poses()
 
 
 def angle_to_pulse(angle):
@@ -86,42 +87,12 @@ def set_servo_angle(channel, angle):
 
 
 
-load_poses()
 servos=[15,14,13,12,7,6,5,4]
 
-
-pose=poses["x"]
-for servo in pose:
-    set_servo_angle(int(servo), int(pose[servo]))
-time.sleep(1)
-
-
-
-def apply_pose( pose,  batch_size=2):
-
-    ch_items = list(pose.items())
-
-    for i in range(0, len(ch_items), batch_size):
-        batch = ch_items[i:i+batch_size]
-        threads = []
-
-        for ch_str, angle in batch:
-            ch = int(ch_str)
-            t = Thread(target=set_servo_angle, args=(ch, angle))
-            t.start()
-            threads.append(t)
-
-        for t in threads:
-            t.join()
-
-
-
 def move_two_servos(ch1, angle1, ch2, angle2):
-    def move(ch, angle):
-        set_servo_angle(ch, angle)
 
-    t1 = Thread(target=move, args=(ch1, angle1))
-    t2 = Thread(target=move, args=(ch2, angle2))
+    t1 = Thread(target=set_servo_angle, args=(ch1, angle1))
+    t2 = Thread(target=set_servo_angle, args=(ch2, angle2))
 
     t1.start()
     t2.start()
@@ -130,32 +101,120 @@ def move_two_servos(ch1, angle1, ch2, angle2):
     t2.join()
 
 
-clockwise = True  # direction of rotation
-# Simulate circular motion
-sleep=.1
-for i in range(300):  # number of steps
-    t=i/20
-    if clockwise:
-        t = -t
-
-    if i>100:
-        sleep=.01
-
-    if i>200:
-        sleep=.001
-
-    r = 50  # radius (max deflection from center)
-    center = 90  # center angle
-
-    x = center + r * math.cos(t)  # servo 1
-    y = center + r * math.sin(t)  # servo 2
+legs={
+    "front_left": [12, 7,1],
+    "front_right": [13, 6,1],
+    "back_left": [15, 5,-1],
+    "back_right": [14, 4,-1]
+}
 
 
-    print(x, y)
 
-    move_two_servos(12, int(x), 7, int(y))
-    time.sleep(sleep)
+def pose_to_angles(pose):
+    for leg in legs.values():
+        a, b, _ = leg
+        angle_a = pose.get(str(a))
+        angle_b = pose.get(str(b))
+        if angle_a is not None and angle_b is not None:
+            move_two_servos(a, angle_a, b, angle_b)
+        time.sleep(0.1)  # Small delay to ensure servos are set
 
+
+def default_pose():
+    pose_to_angles(poses["x"])
+default_pose()  # Set initial pose
+time.sleep(1)  # Allow time for servos to reach position
+
+
+
+def steps_for_degrees(degrees, step_resolution):
+    radians = math.radians(degrees)  # convert degrees to radians
+    return int(radians * step_resolution)
+
+# === EASING FUNCTIONS ===
+
+def linear(t):
+    return t
+
+def ease_out_cubic(t):
+    return 1 - (1 - t) ** 3
+
+# === PATH FUNCTIONS ===
+
+def path_circle(t, r, center, c):
+    t *= c
+    x = center + r * math.cos(t)
+    y = center + r * math.sin(t)
+    return int(x), int(y)
+
+def path_semi_lift(t, r, center, c):
+    t *= c
+    x = center + r * math.cos(t)
+    y = center
+    if t % (2 * math.pi) < math.pi:  # lift on forward swing
+        y += r * 0.5 * math.sin(t)
+    return int(x), int(y)
+
+# === LEG MOVEMENT FUNCTION ===
+
+def clockwise_leg(leg, step_res=30, radius=50, center=90, path_fn=linear, ease_fn=linear, phase=0.0):
+    a, b, c = leg
+    steps = steps_for_degrees(360, step_res)
+    for i in range(steps):
+        prog = i / steps
+        theta = 2 * math.pi * prog + 2 * math.pi * phase 
+        theta=-theta  # Reverse direction for clockwise 
+        x, y = path_fn(theta, radius, center, c)
+        move_two_servos(a, x, b, y)
+
+
+# === GAIT CONTROLLER ===
+def gait_mode(rad=30,path=path_circle, ease=ease_out_cubic,steps=30):
+
+
+    threads = []
+    for idx, leg in enumerate(legs.values()):
+        phase = (idx % 2) * 0.5
+        t = Thread(target=clockwise_leg,
+                   args=(leg, steps, rad, 90, path, ease))
+        t.start()
+        threads.append(t)
+    
+    return threads
+
+
+
+
+
+# for _ in range(4):  # Walk 3 times
+#     threads = gait_mode(rad=10, path=path_circle, ease=linear, steps=10)
+#     for t in threads:
+#         t.join()
+
+
+
+@app.route('/api/walk', methods=["POST"])
+def trigger_walk():
+    default_pose()  # Ensure we start from a known pose
+    time.sleep(1)
+    for _ in range(2):  # Walk 3 times
+        threads = gait_mode(rad=20, path=path_circle, ease=linear, steps=40)
+        for t in threads:
+            t.join()
+    pose_to_angles(poses["sit"])  # Ensure we return to a known pose after walking
+
+
+@app.route('/api/run', methods=["POST"])
+def trigger_run():
+    default_pose()  # Ensure we start from a known pose
+    time.sleep(1)
+    for _ in range(2):  # Run 3 times
+        threads = gait_mode(rad=20, path=path_circle, ease=linear, steps=20)
+        for t in threads:
+            t.join()
+
+    default_pose()  # Return to default pose after running
+    pose_to_angles(poses["stretch"])  # Ensure we return to a known pose after running
 
 
 # --- API Routes ---
@@ -175,9 +234,9 @@ def index():
 
 
 
-# # --- Start Server ---
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000, debug=False)
+# --- Start Server ---
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
 
 
 # --- Shutdown handler ---
@@ -185,6 +244,6 @@ def shutdown():
     print("🔻 Shutting down, releasing servos...")
     for ch in servo_angles:
         pwm.setServoPulse(ch, 0)
-        time.sleep(.1)
+        time.sleep(.25)
 
 atexit.register(shutdown)
