@@ -104,3 +104,45 @@ def smooth_servo(servo=0,start=90, end=90, steps=40, delay=0.01):
         set_servo_angle(servo, angle)
         servo_angles[servo] = angle 
         time.sleep(delay)
+
+
+
+all_legs = {
+    "front_left": (A[0], B[0], C[0]),
+    "front_right": (A[1], B[1], C[1]),
+    "back_left": (A[2], B[2], C[2]),
+    "back_right": (A[3], B[3], C[3]),
+}
+
+def move_leg(a, angle1, b, angle2, c, angle3,speed=40):
+    t1= Thread(target=smooth_servo, kwargs={"servo": a, "start": servo_angles[a], "end": angle1,"steps": speed})
+    t2 = Thread(target=smooth_servo, kwargs={"servo": b, "start": servo_angles[b], "end": angle2,"steps": speed})
+    t3 = Thread(target=smooth_servo, kwargs={"servo": c, "start": servo_angles[c], "end": angle3,"steps": speed})
+
+    t1.start()
+    t2.start()
+    t3.start()
+
+    t1.join()
+    t2.join()
+    t3.join()
+
+def move_all_legs(deg=0,speed=40):
+    threads=[]
+    for idx, leg in enumerate(all_legs.values()):
+        symmetric_deg=deg
+        if idx>=2:
+            symmetric_deg=-deg
+        for servo in leg:
+            t = Thread(target=smooth_servo, kwargs={"servo": servo, "start": servo_angles.get(servo, offsets[servo]), "end": offsets[servo]+symmetric_deg, "steps": speed, "delay": 0.01})
+            t.start()
+            threads.append(t)
+    for t in threads:
+        t.join()
+
+
+def default_pose():
+    move_all_legs(0)
+
+default_pose()
+time.sleep(1)   
