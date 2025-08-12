@@ -15,7 +15,7 @@ picam2.configure(picam2.create_video_configuration(
 ))
 
 # ✅ Set exact FPS using FrameDurationLimits (microseconds)
-fps = 30
+fps = 10
 duration_us = int(1_000_000 / fps)
 picam2.video_configuration.controls.FrameDurationLimits = (duration_us, duration_us)
 
@@ -40,7 +40,7 @@ def generate_frames():
 
 @app.route('/')
 def index():
-    return '<h1>Raspberry Pi Camera Live Stream</h1><img src="/stream">'
+    return '<img src="/stream" style="width: 100%">'
 
 @app.route('/stream')
 def stream():

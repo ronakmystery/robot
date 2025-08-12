@@ -19,10 +19,8 @@
 </head>
 
 <body>
+    <button onclick="setZeroPose()">Set Zero Pose</button>
     <button onclick="setDefaultPose()">Set Default Pose</button>
-    <button onclick="triggerWalk()">Walk</button>
-    <button onclick="triggerRun()">Run</button>
-
     <div id="servos"></div>
 
     <script>
@@ -92,33 +90,15 @@
             }
         }
 
-        function setpose(pose) {
-            for (const ch of activeChannels) {
-                const slider = document.getElementById(`servo-${ch}`);
-                const valueLabel = document.getElementById(`value-${ch}`);
-                if (pose[ch] !== undefined) {
-                    slider.value = pose[ch];
-                    valueLabel.textContent = pose[ch];
-                }
-            }
+
+
+        function setZeroPose() {
+            fetch('/api/zero_pose', { method: 'POST' });
         }
+
 
         function setDefaultPose() {
             fetch('/api/default_pose', { method: 'POST' });
-        }
-
-        function triggerWalk() {
-            fetch('/api/walk', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => console.log('Walk triggered:', data))
-                .catch(err => console.error('Error:', err));
-        }
-
-        function triggerRun() {
-            fetch('/api/run', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => console.log('Run triggered:', data))
-                .catch(err => console.error('Error:', err));
         }
 
         setInterval(fetchState, 1000);

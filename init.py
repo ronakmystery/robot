@@ -71,31 +71,13 @@ B=[1,5,9,13]
 C=[2,6,10,14]
 
 offsets = {
-    0: 75,  4: 96,  8: 112, 12: 90,  # A
-    1: 99, 5: 102, 9: 88, 13: 84,   # B
-    2: 84,  6: 96, 10: 107, 14: 75   # C
+    0: 75,  4: 96,  8: 112, 12: 89,  # A
+    1: 99, 5: 102, 9: 88, 13: 87,   # B
+    2: 84,  6: 96, 10: 101, 14: 74   # C
 }
 
-SERVO_ANGLES_FILE = "servo_angles.json"
-def load_servo_angles():
-    global servo_angles
-    if os.path.exists(SERVO_ANGLES_FILE):
-        with open(SERVO_ANGLES_FILE, "r") as f:
-            try:
-                servo_angles = json.load(f)
-                # Convert all keys to int (JSON keys are always strings)
-                servo_angles = {int(k): v for k, v in servo_angles.items()}
-                print("✅ Servo angles loaded:", servo_angles)
-            except json.JSONDecodeError:
-                print("⚠️ Failed to parse servo_angles.json. Using defaults.")
-    else:
-        print("📂 servo_angles.json not found. Starting fresh.")
-load_servo_angles()
 
-def save_servo_angles():
-    with open(SERVO_ANGLES_FILE, "w") as f:
-        json.dump(servo_angles, f)
-        print("✅ Servo angles saved:", servo_angles.keys())
+
 
 
 def smooth_servo(servo=0,start=90, end=90, steps=40, delay=0.01):
@@ -141,8 +123,70 @@ def move_all_legs(deg=0,speed=40):
         t.join()
 
 
-def default_pose():
+def zero_pose():
     move_all_legs(0)
+zero_pose()
 
+
+
+
+def move_legs(legs=all_legs,d1=0, d2=0, d3=0,speed=20):
+    threads=[]
+    for idx, leg in enumerate(legs.values()):
+        a, b, c = leg
+        symmetric_deg = 1
+        if idx == 1 or idx == 2:
+            symmetric_deg = -1
+        if idx >= 2:
+            symmetric_deg *= -1
+        t= Thread(target=move_leg, args=(a, servo_angles[a]+(d1*symmetric_deg), b, servo_angles[b]+(d2*symmetric_deg), c, servo_angles[c]+(d3*symmetric_deg)), kwargs={"speed": speed})
+        t.start()
+        threads.append(t)
+    for t in threads:
+        t.join()
+
+
+front_legs= {
+    "front_left": (A[0], B[0], C[0]),
+    "front_right": (A[1], B[1], C[1]),
+}
+back_legs = {
+    "back_left": (A[2], B[2], C[2]),
+    "back_right": (A[3], B[3], C[3]),
+}
+
+left_legs = {
+    "front_left": (A[0], B[0], C[0]),
+    "back_left": (A[2], B[2], C[2]),
+}
+
+right_legs = {
+    "front_right": (A[1], B[1], C[1]),
+    "back_right": (A[3], B[3], C[3]),
+}
+
+def move_leg_groups(leg_combos):
+    threads = []
+    for legs, d1, d2, d3, speed in leg_combos:
+        t = Thread(target=move_legs, kwargs={
+            "legs": legs,
+            "d1": d1,
+            "d2": d2,
+            "d3": d3,
+            "speed": speed
+        })
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
+
+
+# Example usage:
+def default_pose():
+    move_leg_groups([
+        (front_legs,  0, 40,  50, 10),  # front legs
+        (back_legs,  0,  40,  40, 20),  # back legs
+    ])
 default_pose()
-time.sleep(1)   
+time.sleep(1)
