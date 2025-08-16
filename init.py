@@ -186,5 +186,5 @@ def default_pose():
         (front_legs,  0, 40,  50, 10),  # front legs
         (back_legs,  0,  40,  40, 20),  # back legs
     ])
-default_pose()
-time.sleep(1)
+# default_pose()
+# time.sleep(1)
