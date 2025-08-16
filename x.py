@@ -38,7 +38,8 @@ def set_default_pose():
     default_pose()
     return jsonify({"status": "default pose set"})
 
-from test import *
+# from test import *
+from balance import *
 
     
 # # # --- Start Server ---
@@ -47,7 +48,8 @@ from test import *
 
 
 
-time.sleep(3)  # Allow time for the initial pose to settle
+time.sleep(3)  # wait for servos to settle
+
 # --- Shutdown handler ---
 def shutdown():
     print("🔻 Shutting down, releasing servos...")

@@ -78,8 +78,6 @@ offsets = {
 
 
 
-
-
 def smooth_servo(servo=0,start=90, end=90, steps=40, delay=0.01):
     for i in range(steps + 1):
         angle = start + (end - start) * i / steps

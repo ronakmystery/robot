@@ -35,12 +35,19 @@ def get_roll_pitch(ax, ay, az):
     pitch = math.degrees(math.atan2(-ax, math.sqrt(ay*ay + az*az)))
     return roll, pitch
 
-print("Press Ctrl+C to stop")
-while True:
+
+
+def get_roll_pitch_angles():
     ax, ay, az, gx, gy, gz = get_accel_gyro()
     roll, pitch = get_roll_pitch(ax, ay, az)
-    print(f"Roll: {roll:6.2f}°, Pitch: {pitch:6.2f}°, "
-          f"GyroX: {gx:7.2f}, GyroY: {gy:7.2f}, GyroZ: {gz:7.2f}")
-    time.sleep(0.1)  # ~20Hz
+    return roll, pitch
+
+# print("Press Ctrl+C to stop")
+# while True:
+#     ax, ay, az, gx, gy, gz = get_accel_gyro()
+#     roll, pitch = get_roll_pitch(ax, ay, az)
+#     print(f"Roll: {roll:6.2f}°, Pitch: {pitch:6.2f}°, "
+#           f"GyroX: {gx:7.2f}, GyroY: {gy:7.2f}, GyroZ: {gz:7.2f}")
+#     time.sleep(0.1)  # ~20Hz
 
 
