@@ -45,17 +45,16 @@ def clamp(x, lo=-60, hi=60):
 def move_servo_threaded(servo, delta):
     base = offsets.get(servo)
     start = servo_angles.get(servo, base)
-    end = clamp(base + delta, 0, 180)
-    smooth_servo(servo=servo, start=start, end=end, steps=20, delay=0.01)
+    end = base + delta
+    smooth_servo(servo=servo, start=start, end=end, steps=10, delay=0)
 
 
 
 while True:
     roll, pitch = get_roll_pitch_angles()
 
-    roll = clamp(roll * 0.4)
-    pitch = clamp(pitch * 0.4)
-
+    roll = clamp(roll * 0.3)
+    pitch = clamp(pitch * 0.15)
 
     threads = []
 

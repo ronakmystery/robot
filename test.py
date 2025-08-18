@@ -2,6 +2,11 @@ from threading import Thread
 from init import *
 import math, time
 
+
+default_pose()
+time.sleep(1)  # wait for servos to settle
+
+
 def circle_leg(leg_key="front_left",
                radius_b=15, radius_c=15,
                freq_hz=0.6,

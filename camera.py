@@ -11,7 +11,7 @@ picam2.configure(picam2.create_video_configuration(
         "size": (200, 200),
         "format": "RGB888"
     },
-    transform=Transform(rotation=180)
+    transform=Transform(rotation=0)
 ))
 
 # ✅ Set exact FPS using FrameDurationLimits (microseconds)

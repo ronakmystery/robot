@@ -17,7 +17,7 @@ app = Flask(__name__)
 # --- API Routes ---
 @app.route('/api/angle/<int:channel>/<int:angle>', methods=["POST"])
 def set_angle_for_servo(channel, angle):
-    smooth_servo(channel, start=servo_angles.get(channel, 90), end=angle, steps=10, delay=0.01)
+    set_servo_angle(channel, angle)
     return jsonify({"channel": channel, "angle": angle})
 
 @app.route('/api/state')
@@ -39,7 +39,7 @@ def set_default_pose():
     return jsonify({"status": "default pose set"})
 
 # from test import *
-from balance import *
+# from balance import *
 
     
 # # # --- Start Server ---
