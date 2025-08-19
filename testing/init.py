@@ -124,6 +124,7 @@ def move_all_legs(deg=0,speed=40):
 def zero_pose():
     move_all_legs(0)
 zero_pose()
+time.sleep(1)  
 
 
 
@@ -179,10 +180,10 @@ def move_leg_groups(leg_combos):
     for t in threads:
         t.join()
 
-
-# Example usage:
 def default_pose():
     move_leg_groups([
         (front_legs,  0, 40,  50, 10),  # front legs
-        (back_legs,  0,  40,  40, 20),  # back legs
+        (back_legs,  0,  40,  40, 10),  # back legs
     ])
+
+    

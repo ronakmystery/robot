@@ -38,22 +38,6 @@ def set_default_pose():
     default_pose()
     return jsonify({"status": "default pose set"})
 
-# from test import *
-# from balance import *
-
-    
-# # # --- Start Server ---
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000, debug=False)
-
-
-
-time.sleep(3)  # wait for servos to settle
-
-# --- Shutdown handler ---
-def shutdown():
-    print("🔻 Shutting down, releasing servos...")
-    for servo in servos:
-        pwm.setServoPulse(servo, 0)
-
-atexit.register(shutdown) 
+# # --- Start Server ---
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)

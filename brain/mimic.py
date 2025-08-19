@@ -8,6 +8,9 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 URL = "http://192.168.1.158:8000/stream"   # Pi stream URL
 cap = cv2.VideoCapture(URL)
 
+#laptop
+# cap = cv2.VideoCapture(0) 
+
 ANGLE_MIN, ANGLE_MAX = 0, 180
 SEND_INTERVAL = 0.01
 

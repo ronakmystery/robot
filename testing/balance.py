@@ -8,7 +8,6 @@ from init import *
 
 
 
-
 def apply_default_pose_to_offsets():
     for idx, (name, (a, b, c)) in enumerate(all_legs.items()):
         # roll: based on "left"/"right" in name
@@ -47,8 +46,6 @@ def move_servo_threaded(servo, delta):
     start = servo_angles.get(servo, base)
     end = base + delta
     smooth_servo(servo=servo, start=start, end=end, steps=10, delay=0)
-
-
 
 while True:
     roll, pitch = get_roll_pitch_angles()
