@@ -1,4 +1,0 @@
-sudo i2cdetect -y 1
-
-
-SFTP: Sync Local → Remote

@@ -64,7 +64,7 @@ while True:
 
 
         # A responds to roll, B & C respond to pitch
-        t1 = Thread(target=move_servo_threaded, args=(a_servo, sym_roll))
+        t1 = Thread(target=move_servo_threaded, args=(a_servo, -sym_roll))
         t2 = Thread(target=move_servo_threaded, args=(b_servo, sym_pitch))
         t3 = Thread(target=move_servo_threaded, args=(c_servo, -sym_pitch))
 
