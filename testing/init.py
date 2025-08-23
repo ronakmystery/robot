@@ -123,9 +123,6 @@ def move_all_legs(deg=0,speed=40):
 
 def zero_pose():
     move_all_legs(0)
-zero_pose()
-time.sleep(1)  
-
 
 
 

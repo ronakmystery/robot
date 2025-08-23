@@ -3,6 +3,10 @@ from init import *
 import math, time
 
 
+
+zero_pose()
+time.sleep(1)  
+
 default_pose()
 time.sleep(1)  # wait for servos to settle
 
