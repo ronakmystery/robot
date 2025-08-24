@@ -21,9 +21,13 @@ def axis_to_angle(v, invert=False):
     v = max(-1.0, min(1.0, v))
     return int(round((v + 1) * 0.5 * 180))  # -1..1 → 0..180
 
+
+
+
+
 while True:
     pygame.event.pump()
-
+    
     # Left leg (0,1,2)
     lx = dead(js.get_axis(0))
     ly = dead(js.get_axis(1))

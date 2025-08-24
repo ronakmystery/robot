@@ -180,7 +180,7 @@ def move_leg_groups(leg_combos):
 def default_pose():
     move_leg_groups([
         (front_legs,  0, 40,  50, 10),  # front legs
-        (back_legs,  0,  40,  40, 10),  # back legs
+        (back_legs,  0,  40,  50, 10),  # back legs
     ])
 
     
