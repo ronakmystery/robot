@@ -7,7 +7,16 @@ import atexit
 from flask import Flask, render_template, jsonify, request, send_file
 import math
 import random
+from init import *
 
+
+def angles_90():
+    # Assuming this function sets the robot to a 90-degree pose
+    for servo in servos:
+        set_servo_angle(servo, 90)
+
+
+angles_90()
 
 
 from init import *

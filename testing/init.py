@@ -71,11 +71,10 @@ B=[1,5,9,13]
 C=[2,6,10,14]
 
 offsets = {
-    0: 69,  4: 97,  8: 118, 12: 88,  # A
-    1: 91, 5: 101, 9: 87, 13: 93,   # B
-    2: 82,  6: 98, 10: 98, 14: 83   # C
+    0: 91,  4: 102,  8: 92,  12: 80,   # A
+    1: 89,  5: 80,   9: 72,  13: 101,  # B
+    2: 90,  6: 85,   10: 83, 14: 90    # C
 }
-
 
 
 def smooth_servo(servo=0,start=90, end=90, steps=40, delay=0.01):
@@ -179,8 +178,8 @@ def move_leg_groups(leg_combos):
 
 def default_pose():
     move_leg_groups([
-        (front_legs,  0, 40,  50, 10),  # front legs
-        (back_legs,  0,  40,  50, 10),  # back legs
+        (front_legs,  0, 90,  90, 40),  # front legs
+        (back_legs,  0,  -90,  -90, 40),  # back legs
     ])
 
     
