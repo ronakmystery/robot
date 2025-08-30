@@ -1,78 +1,96 @@
+from sensors.imu import get_roll_pitch_angles
+import threading, time
+from servos import *
 
 
+# Shared output: balance offsets per servo
 
-from imu import *
-
-
-from init import *
-
-
-
-def apply_default_pose_to_offsets():
-    for idx, (name, (a, b, c)) in enumerate(all_legs.items()):
-        # roll: based on "left"/"right" in name
-        roll_sign = 1 if "left" in name else -1
-
-        # pitch: based on index (even = +, odd = -)
-        pitch_sign = 1 if idx % 2 == 0 else -1
-
-        back_raise=10 if "back" in name else 0
-
-        offsets[a] += 0 * roll_sign       # A = shoulder
-        offsets[b] += 70 * pitch_sign     # B = upper leg
-        offsets[c] += 80 * pitch_sign - (back_raise*pitch_sign)     # C = lower leg
-
-apply_default_pose_to_offsets()
-
-
-
-A = {k: offsets[k] for k in (0, 4, 8, 12)}
-B = {k: offsets[k] for k in (1, 5, 9, 13)}
-C = {k: offsets[k] for k in (2, 6, 10, 14)}
-
-# Each leg = (A, B, C)
-all_legs_servos = {
-    0: (0, 1, 2),    # front left
-    1: (4, 5, 6),    # front right
-    2: (8, 9, 10),   # back left
-    3: (12, 13, 14)  # back right
+# Optional: baseline, in case you want it inside here later
+baseline = {
+    0: 120, 1: 90,  2: 60,
+    4:  60, 5: 90,  6: 120,
+    8: 120, 9: 90, 10: 60,
+    12: 60, 13: 90, 14: 120,
 }
 
-def clamp(x, lo=-60, hi=60):
-    return max(lo, min(x, hi))
+balance_offset = {ch: 0.0 for ch in baseline}
+stand = {
+    0: 120, 1: 90,  2: 60,
+    4: 60,  5: 90,  6: 120,
+    8: 120, 9: 90, 10: 60,
+    12:60, 13: 90, 14: 120,
+}
 
-def move_servo_threaded(servo, delta):
-    base = offsets.get(servo)
-    start = servo_angles.get(servo, base)
-    end = base + delta
-    smooth_servo(servo=servo, start=start, end=end, steps=10, delay=0)
+crouch = {
+        0: 180, 1: 0,  2: 0,
+        4: 0,   5: 180,6: 180,
+        8: 180, 9: 0,  10: 0,
+        12: 0,  13: 180,14: 180,
+    }
 
+
+def balance_loop():
+    global baseline
+    global balance_offset
+    recover=False
+    while True:
+        roll, pitch = get_roll_pitch_angles()
+        print(roll, pitch)
+
+        if abs(roll) > 40 or abs(pitch) > 40:
+            baseline=crouch
+            balance_offset = {ch: 0.0 for ch in baseline}
+            recover=True
+        else:
+            if recover:
+                if abs(roll) < 5 and abs(pitch) < 5:
+                    baseline=stand
+                    balance_offset = {ch: 0.0 for ch in baseline}
+                    recover=False
+            if abs(roll) > abs(pitch):
+                scale=4
+                balance_offset.update({
+                    1: -roll*scale,
+                    5: -roll*scale,
+                    9:  roll*scale,
+                    13: roll*scale,
+
+                    2: -roll*scale,
+                    6: -roll*scale,
+                    10: roll*scale,
+                    14: roll*scale
+                })
+            else:
+                scale=4
+                balance_offset.update({
+
+                    1:  pitch*scale,
+                    5:  -pitch*scale,
+                    9:  -pitch*scale,
+                    13: pitch*scale,
+
+                    2:  pitch*scale,
+                    6:  -pitch*scale,
+                    10:-pitch*scale,
+                    14: pitch*scale
+            })
+
+        time.sleep(0.01)
+
+# Start it in background
+def start_balance_thread():
+    threading.Thread(target=balance_loop, daemon=True).start()
+
+
+
+start_balance_thread()
+# Main control loop
 while True:
-    roll, pitch = get_roll_pitch_angles()
-
-    roll = clamp(roll * 0.3)
-    pitch = clamp(pitch * 0.15)
-
-    threads = []
-
-    for idx, leg in all_legs_servos.items():
-        # Apply symmetry: back legs get inverted roll/pitch
-        sym_roll = -roll if idx < 2 else roll
-        sym_pitch = -pitch if idx % 2 == 0 else pitch
-
-        a_servo, b_servo, c_servo = leg
+    set_targets({
+        ch: baseline[ch] + balance_offset.get(ch, 0)
+        for ch in baseline
+    })
+    time.sleep(0.01)
 
 
-        # A responds to roll, B & C respond to pitch
-        t1 = Thread(target=move_servo_threaded, args=(a_servo, -sym_roll))
-        t2 = Thread(target=move_servo_threaded, args=(b_servo, sym_pitch))
-        t3 = Thread(target=move_servo_threaded, args=(c_servo, -sym_pitch))
-
-        for t in (t1, t2, t3):
-            t.start()
-            threads.append(t)
-
-    for t in threads:
-        t.join()
-
-
+    
