@@ -6,29 +6,11 @@ app = Flask(__name__)
 # ---- Pose library (edit to taste) ---------------------------------
 
 
-crouch = {
-        0: 180, 1: 0,  2: 0,
-        4: 0,   5: 180,6: 180,
-        8: 180, 9: 0,  10: 0,
-        12: 0,  13: 180,14: 180,
-    }
-stand = {
-    0: 120, 1: 90,  2: 60,
-    8: 120, 9: 90, 10: 60,
-    4: 60,  5: 90,  6: 120,
-    12:60, 13: 90, 14: 120,
-}
-rise = {
-    0: 120, 1: 140,  2: 120,
-    4: 60,  5: 40,  6: 60,
-    8: 120, 9: 140, 10: 120,
-    12:60, 13: 40, 14: 60,
-}
+from poses import *
 
 POSES = {
-    "crouch": crouch,
-    "stand": stand,
-    "rise": rise
+    "protect": protect,
+    "default": default
 }
 
 # ---- API -----------------------------------------------------------
@@ -101,17 +83,35 @@ def index():
         <div id="poseButtons"></div>
         <button onclick="sendKill()">Kill All</button>
 
+        <div id="poseButtons"></div>
+<button onclick="logPose()">Log Current Pose</button>
+
+
         <div class="row">
             <div class="col" id="FL"><h3>Front-Left (0,1,2)</h3></div>
             <div class="col" id="FR"><h3>Front-Right (4,5,6)</h3></div>
         </div>
         <div class="row">
-            <div class="col" id="BL"><h3>Back-Left (8,9,10)</h3></div>
-            <div class="col" id="BR"><h3>Back-Right (12,13,14)</h3></div>
+            <div class="col" id="BL"><h3>Back-Left (12,13,14)</h3></div>
+            <div class="col" id="BR"><h3>Back-Right (8,9,10)</h3></div>
         </div>
 
         <script>
-            const layout = { FL:[0,1,2], FR:[4,5,6], BL:[8,9,10], BR:[12,13,14] };
+
+function logPose() {
+    const pose = {};
+    for (const group in layout) {
+        layout[group].forEach(ch => {
+            const val = parseInt(document.getElementById(`s${ch}`).value);
+            pose[ch] = val;
+        });
+    }
+
+    // log as plain JS object with int keys
+    console.log(pose);
+}
+
+            const layout = { FL:[0,1,2], FR:[4,5,6], BR:[8,9,10], BL:[12,13,14] };
 
             function createSliders() {
                 for (const group in layout) {

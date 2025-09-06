@@ -1,69 +1,77 @@
-from balance import *
+from servos import *
 
-import time
+from poses import *
 
-start_balance_thread()
+current_pose = default.copy()
+set_targets(current_pose)
 
-current_pose = {
-    0: 120, 1: 90,  2: 60,
-    8: 120, 9: 90, 10: 60,
-    4: 60,  5: 90,  6: 120,
-    12:60, 13: 90, 14: 120,
-}
+import math, time
 
+def circle_x(t, amp=40, freq=1.0, phase=0):
+    return amp * math.cos(2 * math.pi * freq * t + phase)
 
-balanced_servos = [0,1,2,4, 5, 6, 8, 9, 10, 12, 13, 14]
-
-#servo groups
-A=[0,4,8,12]
-B=[1,5,9,13]
-C=[2,6,10,14]
-
-all_legs = {
-    "front_left": (A[0], B[0], C[0]),
-    "front_right": (A[1], B[1], C[1]),
-    "back_left": (A[2], B[2], C[2]),
-    "back_right": (A[3], B[3], C[3]),
-}
-
-leg_names = list(all_legs.keys())
-current_leg = {"name": leg_names[0]}  # Mutable dict for safe sharing
+def circle_y(t, amp=40, freq=1.0, phase=0):
+    return amp * math.sin(2 * math.pi * freq * t + phase)
 
 
-def leg_selector_thread():
-    i = 0
-    while True:
-        current_leg["name"] = leg_names[i % len(leg_names)]
-        i += 1
-        time.sleep(3)
+# Each leg: (hip_channel, knee_channel, invert_y?)
+LEG_MAP = [
+    (0,1,  2,  +1),   # front-left
+    (4,5,  6,  +1),   # front-right
+    (8,9, 10, -1),    # back-left
+    (12,13,14, -1),    # back-right
+]
 
-threading.Thread(target=leg_selector_thread, daemon=True).start()
+def update_legs(x, y, backwards=False):
+    cmds = {}
+    for a,b, c, ysign in LEG_MAP:
+        # flip x if walking backwards
+        x_val = x if backwards else -x
+        y_val = ysign * y
+        # cmds[a]  = current_pose[a]  -60
+        cmds[b]  = current_pose[b]  + x_val
+        cmds[c] = current_pose[c] + y_val
+    set_targets(cmds)
 
 
 
-crouch = {
-        0: 180, 1: 0,  2: 0,
-        4: 0,   5: 180,6: 180,
-        8: 180, 9: 0,  10: 0,
-        12: 0,  13: 180,14: 180,
+def walking_speed(mode="default"):
+    profiles = {
+        # Indoors
+        "carpet_fast":   (40, 3),    # big stride, fast steps
+        "carpet_slow":   (30, 2),    # slower, stable on carpet
+        "hard_fast":     (25, 3),    # low amp, high freq (avoid slip)
+        "hard_slow":     (15, 1.5),  # cautious on slick floor
+
+        # Outdoors / rough terrain
+        "grass":         (35, 2),    # medium stride, medium speed
+        "rocky":         (20, 1),    # careful, short slow steps
+        "sand":          (45, 1.5),  # wide stride, slower so feet dig in
+
+        # Special styles
+        "precision":     (10, 1),    # small, careful steps
+        "creep":         (15, 0.5),  # very slow, minimal motion
+        "bound":         (50, 2.5),  # exaggerated stride, almost “jumping”
+        "trot":          (35, 2.5),  # diagonal pairs, rhythmic
+        "run":           (45, 3.5),  # max stride + speed (servo stress)
+
+        # Default fallback
+        "default":       (20, 2)
     }
+    return profiles.get(mode, profiles["default"])
 
+
+
+t0 = time.time()
 while True:
-    print("Current leg:", current_leg["name"])
+    t = time.time() - t0
 
-    # Channels for the leg being raised
-    disabled_ch = set(all_legs[current_leg["name"]])
+    amp, freq = walking_speed("precision")
 
-    # Apply balance to all servos *except* the current leg
-    target = {}
-    for ch in current_pose:
-        if ch not in disabled_ch:
-            offset = balance_offset.get(ch, 0)
-            target[ch] = current_pose[ch] + offset
-        else:
-            leg=all_legs[current_leg["name"]]
-            set_targets({leg[1]: crouch[leg[1]]+30})
+    x = circle_x(t, amp=amp, freq=freq)
+    y = circle_y(t, amp=amp, freq=freq)
 
-    set_targets(target)
+
+    update_legs(x, y, backwards=False)
 
     time.sleep(0.01)

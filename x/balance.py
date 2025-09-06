@@ -50,6 +50,8 @@ def move_servo_threaded(servo, delta):
 while True:
     roll, pitch = get_roll_pitch_angles()
 
+    
+
     roll = clamp(roll * 0.3)
     pitch = clamp(pitch * 0.15)
 

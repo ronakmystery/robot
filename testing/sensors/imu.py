@@ -9,11 +9,16 @@ GYRO_XOUT_H  = 0x43
 bus = smbus.SMBus(1)
 bus.write_byte_data(ADDR, PWR_MGMT_1, 0)  # Wake up
 
-def read_word(reg):
-    high = bus.read_byte_data(ADDR, reg)
-    low  = bus.read_byte_data(ADDR, reg+1)
-    val = (high << 8) | low
-    return val-65536 if val & 0x8000 else val
+def read_word(reg, retries=3, delay=0.01):
+    for _ in range(retries):
+        try:
+            high = bus.read_byte_data(ADDR, reg)
+            low  = bus.read_byte_data(ADDR, reg+1)
+            val = (high << 8) | low
+            return val-65536 if val & 0x8000 else val
+        except OSError:
+            time.sleep(delay)
+    raise
 
 def get_accel_gyro():
     ax = read_word(ACCEL_XOUT_H)   / 16384.0
