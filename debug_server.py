@@ -9,8 +9,8 @@ app = Flask(__name__)
 from poses import *
 
 POSES = {
-    "protect": protect,
-    "default": default
+    "protect": pose_protect,
+    "default": pose_default
 }
 
 # ---- API -----------------------------------------------------------

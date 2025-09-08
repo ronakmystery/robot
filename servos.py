@@ -24,7 +24,7 @@ def servo_update(ch, ang):
     angles[ch] = ang  
 
 ALIVE = True
-def servo_worker(ch, speed=5, hz=60):
+def servo_worker(ch, speed=4, hz=60):
     period = 1.0 / hz
     while ALIVE:
         cur = angles.get(ch)
