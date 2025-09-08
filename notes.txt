@@ -1,1 +1,1 @@
-test
+sudo systemctl stop robot.service

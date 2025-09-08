@@ -77,7 +77,7 @@ while True:
         "height": height,
         "pitch": pitch,
         "roll": roll,   
-        "speed": int((rt + 1) / 2 * 30),  # 0 to 100
+        "speed": int((rt + 1) / 2 *100),  # 0 to 100
         "pause": pause_button,
         "start": start_button,
     }
