@@ -3,8 +3,8 @@ Description=test
 After=multi-user.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/x/Documents/robot/test.py
-WorkingDirectory=/home/x/Documents/robot
+ExecStart=/usr/bin/python3 /home/x/Downloads/robot/examples/test.py
+WorkingDirectory=/home/x/Downloads/robot/examples/
 StandardOutput=journal
 StandardError=journal
 Restart=always
