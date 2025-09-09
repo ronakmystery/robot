@@ -1,0 +1,14 @@
+[Unit]
+Description=test
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/x/Documents/robot/test.py
+WorkingDirectory=/home/x/Documents/robot
+StandardOutput=journal
+StandardError=journal
+Restart=always
+User=x
+
+[Install]
+WantedBy=multi-user.target

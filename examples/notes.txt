@@ -1,0 +1,14 @@
+/home/x/Documents/robot/test.py
+
+sudo nano /etc/systemd/system/test.service
+
+chmod +x test.py
+
+sudo systemctl daemon-reload
+sudo systemctl enable test.service
+sudo systemctl start test.service
+systemctl status test.service
+
+
+systemctl status test.service
+journalctl -u test.service -f
