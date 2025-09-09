@@ -55,10 +55,10 @@ while True:
         mode = "walk"
         backwards = True
     
-    pitch = int(-rjsy * 50) 
-    roll=int(rjsx *50)
+    pitch = int(-rjsy * 100) 
+    roll=int(rjsx *40)
 
-    lateral = int(ljsx * 50)
+    lateral = int(ljsx * 100)
     if backwards:
         lateral = -lateral
 
@@ -77,7 +77,7 @@ while True:
         "height": height,
         "pitch": pitch,
         "roll": roll,   
-        "speed": int((rt + 1) / 2 *100),  # 0 to 100
+        "speed": int((rt + 1) / 2 *50),  
         "pause": pause_button,
         "start": start_button,
     }

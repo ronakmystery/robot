@@ -81,7 +81,10 @@ def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
         y_val = ysign * y
 
         # Hip (lateral only)
-        cmds[a] = baseline[a] - lateral
+        if a in [0,4]:  # hip channels
+            cmds[a] = baseline[a] - lateral*.5
+        if a in [8,12]:  # hip channels
+            cmds[a] = baseline[a] - lateral*.5
 
         # Stride + lift
         stride_val = baseline[b] + x_val
@@ -119,6 +122,18 @@ def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
         if b in [5]:   # front-left stride
             stride_val += roll
 
+        if a in [8]:   # back-right hip
+            lift_val -= roll
+        if b in [9]:   # back-right stride  
+            stride_val -= roll
+        if a in [12]:  # back-right hip
+            lift_val -= roll
+        if b in [13]:  # back-right stride
+            stride_val -= roll
+
+
+
+
         # --- Apply balance correction only when idle ---
         if MODE == "stop":
             stride_val += balance_offset.get(b, 0)
@@ -135,7 +150,7 @@ def walking_loop():
     while True:
         t = time.time() - t0
         if MODE == "walk":
-            amp=30+SPEED
+            amp=0+SPEED
             freq=4
             x = circle_x(t, amp=amp, freq=freq)
             y = circle_y(t, amp=amp, freq=freq)

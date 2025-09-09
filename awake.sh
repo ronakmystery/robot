@@ -1,11 +1,12 @@
 #!/bin/bash
 cd /home/x/robot
 
-# Start Flask server in background
-/usr/bin/python3 /home/x/robot/manual_control.py &
+# Start Flask server if not running
+pgrep -f manual_control.py >/dev/null || /usr/bin/python3 /home/x/robot/manual_control.py &
 
-# Small delay to make sure server is up
-sleep 3
+# Start camera if not running
+pgrep -f camera_server.py >/dev/null || /usr/bin/python3 /home/x/robot/sensors/camera_server.py &
 
-# Start joystick controller in foreground (systemd will track this)
+
+# Start joystick controller in foreground
 exec /usr/bin/python3 /home/x/robot/btcontroller.py
