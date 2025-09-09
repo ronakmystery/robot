@@ -1,10 +1,4 @@
-/home/x/Downloads/robot/examples/test.py
 
-sudo nano /etc/systemd/system/test.service
 
-chmod +x test.py
-
-sudo systemctl daemon-reload
-sudo systemctl enable test.service
-sudo systemctl start test.service
-systemctl status test.service
+reset vscode ssh from windows terminal
+rm -rf ~/.vscode-server
