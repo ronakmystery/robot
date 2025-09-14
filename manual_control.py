@@ -39,8 +39,8 @@ def balance_loop():
     recover = False
     while True:
         roll, pitch = get_roll_pitch_angles()
-        pitch=-pitch
-        scale = 4
+        pitch=-pitch # flipped
+        scale = 2
         if abs(roll) > 40 or abs(pitch) > 40:
             baseline = pose_protect
             balance_offset = {ch: 0.0 for ch in baseline}

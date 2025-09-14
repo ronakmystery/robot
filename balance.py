@@ -4,7 +4,7 @@ from servos import *
 from poses import *
 
 time.sleep(1)
-baseline = default.copy()
+baseline = pose_default.copy()
 balance_offset = {ch: 0.0 for ch in baseline}
 
 recovering = False
@@ -49,14 +49,14 @@ def balance_loop():
         if abs(roll) > 40 or abs(pitch) > 40:
             if not recovering:
                 print("⚠️ Over 40° → protect")
-                baseline = protect
+                baseline = pose_protect
                 balance_offset = {ch: 0.0 for ch in baseline}
                 recovering = True
 
         else:
             if recovering and abs(roll) < 5 and abs(pitch) < 5:
                 print("✅ Stable → back to default")
-                baseline = default
+                baseline = pose_default
                 balance_offset = {ch: 0.0 for ch in baseline}
                 recovering = False
 

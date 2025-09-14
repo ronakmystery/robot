@@ -2,7 +2,7 @@ from servos import *
 
 from poses import *
 
-current_pose = default.copy()
+current_pose = pose_default.copy()
 set_targets(current_pose)
 
 import math, time

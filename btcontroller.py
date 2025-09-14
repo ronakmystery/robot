@@ -58,7 +58,7 @@ while True:
     pitch = int(-rjsy * 100) 
     roll=int(rjsx *40)
 
-    lateral = int(ljsx * 100)
+    lateral = int(ljsx * 200)
     if backwards:
         lateral = -lateral
 
@@ -81,7 +81,6 @@ while True:
         "pause": pause_button,
         "start": start_button,
     }
-    print(data)
 
     try:
         requests.post(ROBOT_API, json=data, timeout=0.1)

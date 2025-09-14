@@ -1,1 +1,8 @@
+ssh x@10.236.55.45
+
+
 sudo systemctl stop robot.service
+
+pkill -f manual_control.py
+pkill -f camera_server.py
+pkill -f btcontroller.py
