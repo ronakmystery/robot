@@ -1,34 +1,33 @@
-import pygame, time, requests, json
+import pygame, time, json, socket
 
-# Init controller
+# --- Controller setup ---
 pygame.init()
 pygame.joystick.init()
-
 if pygame.joystick.get_count() == 0:
     print("No controller found!")
     exit()
-
 joystick = pygame.joystick.Joystick(0)
 joystick.init()
-print(f"Connected to {joystick.get_name()}")
+print(f"🎮 Connected to {joystick.get_name()}")
 
-ip="10.236.55.45"
-ROBOT_API = f"http://{ip}:5000/api/walk"
+# --- UDP Setup ---
+UDP_IP = "10.236.55.45"   # Robot IP
+UDP_PORT = 5005
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # --- State ---
 height = 0
-moves = []         # store sent packets
-recording = False  # toggle recording
-
-
-
+moves = []          # store sent packets
+recording = False   # toggle recording
 save_file = "moves.json"
+
 def save_moves():
     if not moves:
         return
     with open(save_file, "w") as f:
         json.dump(moves, f)
     print(f"💾 Saved {len(moves)} moves to {save_file}")
+
 while True:
     pygame.event.pump()
 
@@ -47,10 +46,9 @@ while True:
 
     # Adjust height
     if a:
-        height += 10
+        height += 1
     if y:
-        height -= 10
-
+        height -= 1
     height = max(-100, min(100, height))
 
     # Walking logic
@@ -65,18 +63,18 @@ while True:
         mode = "walk"
         backwards = True
 
-    pitch = int(-rjsy * 100) 
+    pitch = int(-rjsy * 100)
     roll  = int(rjsx * 40)
     lateral = int(ljsx * 200)
     if backwards:
         lateral = -lateral
 
-    left_bumper = joystick.get_button(4)
-    right_bumper = joystick.get_button(5)
-    # Buttons
-    record_button = joystick.get_button(6)
-    start_button = joystick.get_button(7)
+    left_bumper  = joystick.get_button(4)  # LB → pause
+    right_bumper = joystick.get_button(5)  # RB → start
+    record_button = joystick.get_button(6) # Back → toggle record
+    start_button  = joystick.get_button(7) # Start → replay
 
+    # Packet to send
     data = {
         "mode": mode,
         "walk_type": walk_type,
@@ -86,44 +84,34 @@ while True:
         "pitch": pitch,
         "roll": roll,
         "speed": int((rt + 1) / 2 * 40),
-        "pause": left_bumper,
-        "start": right_bumper,
+        "pause": bool(left_bumper),
+        "start": bool(right_bumper),
     }
 
     # --- Recording toggle ---
     if record_button:
         recording = not recording
         if recording:
-            moves.clear()   # ✅ clear old moves when starting new record
+            moves.clear()
             print("🔴 Recording ON (cleared old moves)")
         else:
             save_moves()
             print("⏹️ Recording OFF")
         time.sleep(0.3)  # debounce
 
-
-
-
     # Store moves if recording
     if recording:
         moves.append((time.time(), data.copy()))
-    
 
-    # --- Send to robot ---
-    try:
-        requests.post(ROBOT_API, json=data, timeout=0.1)
-    except:
-        pass
+    # --- Send to robot via UDP ---
+    sock.sendto(json.dumps(data).encode(), (UDP_IP, UDP_PORT))
 
     # --- Replay if START pressed ---
     if start_button and moves:
         print("▶️ Replaying moves...")
         for t, move in moves:
-            time.sleep(.01)  # preserve timing
-            try:
-                requests.post(ROBOT_API, json=move, timeout=0.1)
-            except:
-                pass
+            time.sleep(0.01)  # preserve timing
+            sock.sendto(json.dumps(move).encode(), (UDP_IP, UDP_PORT))
         print("✅ Replay finished")
 
-    time.sleep(0.01)
+    time.sleep(0.01)  # ~100 Hz loop

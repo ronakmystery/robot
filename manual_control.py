@@ -1,26 +1,28 @@
-from flask import Flask, request, jsonify
-import threading, time, math
+import socket, json, threading, time, math, sys, signal
 
-from servos import *
-from poses import *
-
-app = Flask(__name__)
+from servos import set_targets
+from poses import pose_default, pose_protect
+from sensors.imu import get_roll_pitch_angles
 
 # --- State ---
 MODE = "stop"          # "walk" or "stop"
 WALK_TYPE = "flat"
 BACKWARDS = False
 LATERAL = 0
-HEIGHT = 0             # unified height
-PITCH = 0              # unified pitch (signed: -100..100)
-ROLL = 0               # unified roll (signed: -100..100)
-SPEED = 0             # default speed
+HEIGHT = 0
+PITCH = 0              # signed: -100..100
+ROLL = 0               # signed: -100..100
+SPEED = 0
 
 baseline = pose_protect.copy()
 balance_offset = {ch: 0.0 for ch in baseline}
 set_targets(baseline)
 
-
+# --- UDP Setup ---
+UDP_IP = "0.0.0.0"
+UDP_PORT = 5005
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((UDP_IP, UDP_PORT))
 
 # --- Gait math ---
 def circle_x(t, amp=40, freq=1.0, phase=0):
@@ -31,15 +33,13 @@ def circle_y(t, amp=40, freq=1.0, phase=0):
 
 LEG_MAP = [(0,1,2,+1),(4,5,6,+1),(8,9,10,-1),(12,13,14,-1)]
 
-# # --- Balance thread ---
-from sensors.imu import get_roll_pitch_angles
-
+# --- Balance thread ---
 def balance_loop():
     global baseline, balance_offset
     recover = False
     while True:
         roll, pitch = get_roll_pitch_angles()
-        pitch=-pitch # flipped
+        pitch = -pitch  # flipped
         scale = 2
         if abs(roll) > 40 or abs(pitch) > 40:
             baseline = pose_protect
@@ -70,7 +70,6 @@ def balance_loop():
 def start_balance_thread(): 
     threading.Thread(target=balance_loop, daemon=True).start()
 
-
 # --- Gait updater ---
 def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
     global baseline
@@ -81,60 +80,38 @@ def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
         y_val = ysign * y
 
         # Hip (lateral only)
-        if a in [0,4]:  # hip channels
-            cmds[a] = baseline[a] - lateral*.5
-        if a in [8,12]:  # hip channels
-            cmds[a] = baseline[a] - lateral*.5
+        if a in [0,4,8,12]:
+            cmds[a] = baseline[a] - lateral * 0.5
 
         # Stride + lift
         stride_val = baseline[b] + x_val
         lift_val   = baseline[c] + y_val
 
-
-        #height adjustment
-        if b and c in [1,2,13,14]:  # front legs
+        # Height adjustment
+        if b and c in [1,2,13,14]:
             stride_val += height*ysign
-            lift_val += height*ysign
-        if b and c in [5,6,9,10]:  # back legs
+            lift_val   += height*ysign
+        if b and c in [5,6,9,10]:
             stride_val -= height*ysign
-            lift_val -= height*ysign
+            lift_val   -= height*ysign
 
-        
-        
-        
-        # --- Apply pitch: front vs back legs ---
-        if a in [0]:
-            lift_val += pitch
-        if a in [4]:  # back hips → apply opposite pitch
-            lift_val -= pitch
-        if b in [1]:
-            stride_val += pitch
-        if b in [5]:  # back hips → apply opposite pitch
-            stride_val -= pitch
+        # Pitch
+        if a == 0: lift_val += pitch
+        if a == 4: lift_val -= pitch
+        if b == 1: stride_val += pitch
+        if b == 5: stride_val -= pitch
 
-        # --- Apply roll: front-left leg only ---
-        if a in [0]:   # front-left hip
-            lift_val += roll
-        if b in [1]:   # front-left stride
-            stride_val += roll
-        if a in [4]:   # front-left stride
-            lift_val += roll
-        if b in [5]:   # front-left stride
-            stride_val += roll
+        # Roll
+        if a == 0: lift_val += roll
+        if b == 1: stride_val += roll
+        if a == 4: lift_val += roll
+        if b == 5: stride_val += roll
+        if a == 8: lift_val -= roll
+        if b == 9: stride_val -= roll
+        if a == 12: lift_val -= roll
+        if b == 13: stride_val -= roll
 
-        if a in [8]:   # back-right hip
-            lift_val -= roll
-        if b in [9]:   # back-right stride  
-            stride_val -= roll
-        if a in [12]:  # back-right hip
-            lift_val -= roll
-        if b in [13]:  # back-right stride
-            stride_val -= roll
-
-
-
-
-        # --- Apply balance correction only when idle ---
+        # Apply balance correction if idle
         if MODE == "stop":
             stride_val += balance_offset.get(b, 0)
             lift_val   += balance_offset.get(c, 0)
@@ -144,14 +121,14 @@ def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
 
     set_targets(cmds)
 
-# --- Background loop ---
+# --- Background walking loop ---
 def walking_loop():
     t0 = time.time()
     while True:
         t = time.time() - t0
         if MODE == "walk":
-            amp=0+SPEED
-            freq=4
+            amp = SPEED
+            freq = 4
             x = circle_x(t, amp=amp, freq=freq)
             y = circle_y(t, amp=amp, freq=freq)
         else:
@@ -167,50 +144,43 @@ def walking_loop():
         )
         time.sleep(0.02)
 
-threading.Thread(target=walking_loop, daemon=True).start()
+# --- UDP handler ---
+def udp_loop():
+    global MODE, WALK_TYPE, BACKWARDS, LATERAL, HEIGHT, PITCH, ROLL, SPEED
+    global baseline, balance_offset
 
-@app.route("/api/walk", methods=["POST"])
-def set_walk():
-    global MODE, WALK_TYPE, BACKWARDS, LATERAL, HEIGHT, PITCH, ROLL, SPEED  
-    global  baseline, balance_offset
-    data = request.get_json()
+    while True:
+        data, addr = sock.recvfrom(1024)
+        try:
+            msg = json.loads(data.decode())
 
-    if "pause" in data and data["pause"]:
-        MODE = "stop"
-        baseline = pose_protect
-        balance_offset = {ch: 0.0 for ch in baseline}
-        def do_pause_pose():
-            set_targets(pose_protect)
-            time.sleep(1)
+            if msg.get("pause"):
+                MODE = "stop"
+                baseline = pose_protect
+                balance_offset = {ch: 0.0 for ch in baseline}
+                set_targets(pose_protect)
+                continue
 
-        threading.Thread(target=do_pause_pose, daemon=True).start()
-        return jsonify({"status": "paused"}), 200
+            if msg.get("start"):
+                MODE = "stop"
+                baseline = pose_default
+                balance_offset = {ch: 0.0 for ch in baseline}
+                set_targets(pose_default)
+                continue
 
-    if "start" in data and data["start"]:
-        MODE = "stop"
-        baseline = pose_default
-        balance_offset = {ch: 0.0 for ch in baseline}
-        def do_start_pose():
-            set_targets(pose_default)
-            time.sleep(1)
+            if "mode" in msg: MODE = msg["mode"]
+            if "walk_type" in msg: WALK_TYPE = msg["walk_type"]
+            if "backwards" in msg: BACKWARDS = bool(msg["backwards"])
+            if "lateral" in msg:   LATERAL = int(msg["lateral"])
+            if "height" in msg:    HEIGHT = int(msg["height"])
+            if "pitch" in msg:     PITCH = int(msg["pitch"])
+            if "roll" in msg:      ROLL = int(msg["roll"])
+            if "speed" in msg:     SPEED = int(msg["speed"])
 
-        threading.Thread(target=do_start_pose, daemon=True).start()
+        except Exception as e:
+            print("⚠️ Bad packet:", e)
 
-    if not data:
-        return jsonify({"error":"no data"}),400
-
-    if "mode" in data and data["mode"] in ["walk","stop"]:
-        MODE = data["mode"]
-    if "walk_type" in data: WALK_TYPE = data["walk_type"]
-    if "backwards" in data: BACKWARDS = bool(data["backwards"])
-    if "lateral" in data:   LATERAL = int(data.get("lateral",0))
-    if "height" in data:    HEIGHT = int(data.get("height",0))
-    if "pitch" in data:     PITCH = int(data.get("pitch",0))  # ✅ update pitch
-    if "roll" in data:      ROLL = int(data.get("roll",0))   # ✅ update roll
-    if "speed" in data:     SPEED = int(data.get("speed",0)) # ✅ update speed
-    return jsonify({"status":"ok"}),200
-
-import signal, sys
+# --- Shutdown handler ---
 def shutdown_handler(sig, frame):
     print("\n🛑 Caught Ctrl+C, shutting down...")
     sys.exit(0)
@@ -219,5 +189,8 @@ signal.signal(signal.SIGINT, shutdown_handler)
 # --- Main ---
 if __name__ == "__main__":
     start_balance_thread()
-    print("🚀 Walking + Balance Server running at http://0.0.0.0:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    threading.Thread(target=walking_loop, daemon=True).start()
+    threading.Thread(target=udp_loop, daemon=True).start()
+    print(f"🚀 Robot UDP server running on {UDP_IP}:{UDP_PORT}")
+    while True:
+        time.sleep(1)
