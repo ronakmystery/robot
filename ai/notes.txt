@@ -1,2 +1,0 @@
-docker run -it --name test-python python:3.11-slim /bin/bash
-

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Control</title>
+    <style>
+        .servo-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .servo-group {
+            margin-right: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <button onclick="setZeroPose()">Set Zero Pose</button>
+    <button onclick="setDefaultPose()">Set Default Pose</button>
+    <div id="servos"></div>
+
+    <script>
+        const servos = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14];
+
+        const A = [0, 4, 8, 12];
+        const B = [1, 5, 9, 13];
+        const C = [2, 6, 10, 14];
+
+        const activeChannels = servos;
+
+        const labels = {};
+        for (let i = 0; i < A.length; i++) {
+            if (A[i] !== undefined) labels[A[i]] = `A${i}`;
+            if (B[i] !== undefined) labels[B[i]] = `B${i}`;
+            if (C[i] !== undefined) labels[C[i]] = `C${i}`;
+        }
+
+        const groupings = [A, B, C];
+        const servoContainer = document.getElementById("servos");
+
+        for (let i = 0; i < A.length; i++) {
+            const row = document.createElement("div");
+            row.className = "servo-row";
+
+            for (let g = 0; g < groupings.length; g++) {
+                const ch = groupings[g][i];
+                if (ch === undefined) continue;
+
+                const group = document.createElement("div");
+                group.className = "servo-group";
+
+                group.innerHTML = `
+        <div id="label-${ch}">${labels[ch] || `Servo ${ch}`}</div>
+        <input type="range" min="0" max="180" step="1" id="servo-${ch}" />
+        <div class="angle-label">Angle: <span id="value-${ch}">0</span>°</div>
+      `;
+
+                row.appendChild(group);
+            }
+
+            servoContainer.appendChild(row);
+        }
+
+        async function fetchState() {
+            const res = await fetch('/api/state');
+            const angles = await res.json();
+
+            for (const ch of activeChannels) {
+                const slider = document.getElementById(`servo-${ch}`);
+                const valueLabel = document.getElementById(`value-${ch}`);
+                if (!slider) continue;
+
+                if (!slider.dataset.listenerAdded) {
+                    slider.addEventListener("input", async (e) => {
+                        const angle = e.target.value;
+                        valueLabel.textContent = angle;
+                        await fetch(`/api/angle/${ch}/${angle}`, { method: 'POST' });
+                    });
+                    slider.dataset.listenerAdded = true;
+                }
+
+                if (angles[ch] !== undefined) {
+                    slider.value = angles[ch];
+                    valueLabel.textContent = angles[ch];
+                }
+            }
+        }
+
+
+
+        function setZeroPose() {
+            fetch('/api/zero_pose', { method: 'POST' });
+        }
+
+
+        function setDefaultPose() {
+            fetch('/api/default_pose', { method: 'POST' });
+        }
+
+        setInterval(fetchState, 1000);
+    </script>
+
+</body>
+
+</html>

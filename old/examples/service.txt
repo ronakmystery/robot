@@ -1,0 +1,33 @@
+/home/x/Downloads/robot/examples/test.py
+
+sudo nano /etc/systemd/system/test.service
+
+
+
+[Unit]
+Description=test
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/x/Downloads/robot/examples/test.py
+WorkingDirectory=/home/x/Downloads/robot/examples/
+StandardOutput=journal
+StandardError=journal
+Restart=always
+User=x
+
+[Install]
+WantedBy=multi-user.target
+
+
+chmod +x test.py
+
+sudo systemctl daemon-reload
+sudo systemctl enable test.service
+sudo systemctl start test.service
+systemctl status test.service
+
+
+ps aux | grep test.py
+sudo systemctl daemon-reload
+sudo systemctl restart test.service

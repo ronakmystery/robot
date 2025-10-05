@@ -1,4 +1,0 @@
-
-
-reset vscode ssh from windows terminal
-rm -rf ~/.vscode-server

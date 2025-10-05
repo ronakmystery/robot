@@ -1,8 +1,8 @@
 import socket, json, threading, time, math, sys, signal
 
-from servos import set_targets
+from servos import set_targets,kill 
 from poses import pose_default, pose_protect
-from sensors.imu import get_roll_pitch_angles
+from imu import get_roll_pitch_angles
 
 # --- State ---
 MODE = "stop"          # "walk" or "stop"
@@ -81,7 +81,7 @@ def update_legs(x, y, backwards=False, lateral=0, height=0, pitch=0, roll=0):
 
         # Hip (lateral only)
         if a in [0,4,8,12]:
-            cmds[a] = baseline[a] - lateral * 0.5
+            cmds[a] = baseline[a] - lateral * 0.3
 
         # Stride + lift
         stride_val = baseline[b] + x_val
@@ -183,6 +183,7 @@ def udp_loop():
 # --- Shutdown handler ---
 def shutdown_handler(sig, frame):
     print("\n🛑 Caught Ctrl+C, shutting down...")
+    kill()
     sys.exit(0)
 signal.signal(signal.SIGINT, shutdown_handler)
 
